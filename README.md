@@ -31,6 +31,25 @@ The frontend is built on the **Next.js App Router**, ensuring high performance, 
 
 ---
 
+## 🏗️ Hybrid Architecture (Script + Iframe)
+
+To provide a seamless "drop-in" experience for third-party websites, this project utilizes a **Hybrid Integration Model**.
+
+### 1. The Manager (`<script>`)
+The `embed.js` script acts as the host-side manager. It executes directly in the client's global context to:
+*   Inject the Floating Action Button (FAB).
+*   Handle window resize events and dynamic positioning.
+*   Animate the opening/closing of the widget container.
+*   Detect `data-` attributes for instant theming (colors, docking).
+
+### 2. The Sandbox (`<iframe>`)
+The script mounts a secure `<iframe>` containing the actual chat application. This provides:
+*   **Style Isolation**: The host website's CSS cannot break the AI's layout.
+*   **JS Security**: The chat's React logic runs in its own isolated thread.
+*   **Backend Sync**: Centralized session management without leaking host cookies.
+
+---
+
 ## 🛠️ Technical Stack
 
 - **Framework**: [Next.js](https://nextjs.org/) (App Directory paradigm).
@@ -85,10 +104,22 @@ Once the frontend is deployed, any website can integrate your AI Chatbot by addi
 ```html
 <!-- Add this to your HTML body -->
 <script 
-  src="https://your-domain.com/embed.js" 
+  src="https://your-oracle-ai-app.vercel.app/embed.js" 
   data-primary-color="#2563eb"
   data-position="bottom-right">
 </script>
+```
+
+### 🌍 Real-World Integration Example
+If your project is deployed at `https://oracle-ai.vercel.app`, and a client named **"Your Website"** (`https://your-website.com`) wants to use it:
+1. They simply paste the above script into their HTML.
+2. The script automatically detects it's running on `your-website.com`.
+3. It securely reaches back to `oracle-ai.vercel.app` to load the AI brain.
+
+### 🛠️ Local Testing Example
+To test the widget on your own machine during development:
+```html
+<script src="http://localhost:3000/embed.js"></script>
 ```
 
 ### Script Customization
@@ -96,7 +127,13 @@ Once the frontend is deployed, any website can integrate your AI Chatbot by addi
 | :--- | :--- | :--- |
 | **`data-primary-color`** | `#18181b` | Theme color of the FAB and widget highlights |
 | **`data-position`** | `bottom-right` | Docking position (`bottom-right` or `bottom-left`) |
+| **`data-size`** | `standard` | Core dimensions (`slim`, `standard`, `wide`) |
 | **`data-chat-url`** | `(auto)` | Manual override for the iframe endpoint |
+
+### 📐 Interactive Resizing
+The widget includes a **Manual Resizer** handle (top-left corner). 
+- Users can drag to custom-fit the chat window to their screen.
+- **Persistence**: The chosen size is saved to the user's `localStorage`, ensuring the widget remains at their preferred dimensions on return visits.
 
 ---
 
