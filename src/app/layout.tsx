@@ -25,7 +25,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="h-full bg-background text-on-background overflow-hidden selection:bg-primary/30" suppressHydrationWarning>
+      <body className="h-full bg-background text-on-background selection:bg-primary/30" suppressHydrationWarning>
         {children}
       </body>
     </html>

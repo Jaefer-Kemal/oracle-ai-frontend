@@ -77,14 +77,14 @@ function SidebarContent() {
         />
       )}
 
-      <aside className={`fixed left-0 top-16 bottom-0 flex-col border-r shell-border py-6 flex-shrink-0 z-[60] transition-all duration-300 transform overflow-y-auto oracle-scroll bg-background ${
+      <aside className={`fixed left-0 top-0 bottom-0 flex-col border-r shell-border py-6 flex-shrink-0 z-[60] transition-all duration-300 transform overflow-y-auto oracle-scroll bg-background ${
         isOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0 w-64"
       }`}>
-        <div className="px-6 mb-8 flex items-center gap-3 oracle-mobile-only">
+        <div className="px-6 mb-8 flex items-center gap-3">
           <div className="w-8 h-8 bg-primary-container rounded-xl flex items-center justify-center shadow-lg shadow-primary-container/20">
-            <span className="material-symbols-outlined text-on-primary-container text-lg">auto_awesome</span>
+            <span className="material-symbols-outlined text-on-primary-container text-lg leading-none">auto_awesome</span>
           </div>
-          <h2 className="text-base font-bold nav-text leading-tight">Oracle AI</h2>
+          <h2 className="text-base font-black nav-text leading-tight tracking-tighter">Oracle AI</h2>
         </div>
 
         <nav className="flex-1 px-4 overflow-y-auto oracle-scroll space-y-1">

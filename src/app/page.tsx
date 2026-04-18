@@ -90,11 +90,11 @@ export default function HomePage() {
             </div>
 
             <div className="space-y-6">
-              <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-on-surface leading-[0.9] lg:max-w-xl">
+              <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-on-surface leading-[0.95] lg:max-w-xl">
                 Knowledge<br />
                 <span className="bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-[gradient_4s_linear_infinite] bg-clip-text text-transparent italic">Perfected.</span>
               </h1>
-              <p className="text-xl text-on-surface-variant leading-relaxed max-w-lg font-medium opacity-90">
+              <p className="text-lg text-on-surface-variant leading-relaxed max-w-lg font-medium opacity-90">
                 Oracle transforms fragmented enterprise data into a singular, high-fidelity intelligence layer — powered by vector search and Grok-3 reasoning.
               </p>
             </div>

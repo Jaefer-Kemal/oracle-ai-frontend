@@ -98,7 +98,10 @@ export default function TopBar({ noSidebar = false }: { noSidebar?: boolean }) {
           </button>
         )}
         
-        <Link href={loggedIn ? "/admin" : "/"} className="text-xl font-black nav-text tracking-tighter hover:text-primary transition-colors flex items-center gap-2 shrink-0">
+        <Link 
+          href={loggedIn ? "/admin" : "/"} 
+          className={`text-xl font-black nav-text tracking-tighter hover:text-primary transition-colors flex items-center gap-2 shrink-0 ${noSidebar ? "" : "lg:hidden"}`}
+        >
           Oracle AI
         </Link>
         {loggedIn && (

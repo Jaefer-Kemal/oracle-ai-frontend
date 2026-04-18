@@ -302,7 +302,7 @@ function DashboardContent() {
           
           <div className={`p-8 space-y-12 max-w-7xl mx-auto w-full pb-32 ${selectedSession ? 'hidden' : 'block animate-in fade-in duration-500'}`}>
             <div className="flex flex-col gap-1">
-              <h2 className="text-[3.5rem] leading-[1] font-black tracking-tighter text-on-surface">
+              <h2 className="text-[2.25rem] leading-[1.1] font-black tracking-tighter text-on-surface">
                  {titles[tab] || "Admin Console"}
               </h2>
               <div className="flex items-center gap-2">

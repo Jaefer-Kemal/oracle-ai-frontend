@@ -173,8 +173,19 @@
     }
   }
 
+  html {
+    font-size: 13px !important;
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: 12px !important;
+    }
+  }
+
   body {
     @apply bg-background text-on-background font-inter antialiased;
+    overflow-x: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
