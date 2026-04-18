@@ -15,6 +15,8 @@ export function setToken(token: string, username: string, expiresIn: number = 36
   localStorage.setItem(USER_KEY, username);
   // Record expiry time
   localStorage.setItem(EXPIRY_KEY, String(Date.now() + expiresIn * 1000));
+  // Set cookie for middleware
+  document.cookie = `oracle_token=${token}; path=/; max-age=${expiresIn}; SameSite=Lax`;
 }
 
 export function clearToken(): void {
@@ -22,6 +24,8 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(EXPIRY_KEY);
+  // Remove cookie to trigger middleware redirect
+  document.cookie = "oracle_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 }
 
 export function getUsername(): string | null {
@@ -105,6 +109,6 @@ export function addNotification(msg: string, type: Notification["type"] = "info"
   localStorage.setItem("oracle_notifications", JSON.stringify(notifs.slice(0, 20)));
 }
 export function markAllRead(): void {
-  const notifs = getNotifications().map((n) => ({ ...n, read: true }));
-  localStorage.setItem("oracle_notifications", JSON.stringify(notifs));
+  // User requested "remove it" when marking all as read
+  localStorage.setItem("oracle_notifications", "[]");
 }
