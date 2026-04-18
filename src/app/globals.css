@@ -1,26 +1,292 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Common Radii */
+  --radius-default: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 9999px;
 
-@theme inline {
+  /* Typography */
+  --font-inter: "Inter", sans-serif;
+
+  /* Obsidian Prism Color Palette - Default Dark Variable Mapping */
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-on-background: var(--on-background);
+  --color-surface: var(--surface);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-surface-variant: var(--surface-variant);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-inverse-primary: var(--inverse-primary);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  
+  --color-error: var(--error);
+
+  /* ---- Semantic Nav / Shell tokens ---- */
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-border: var(--nav-border);
+  --color-nav-text: var(--nav-text);
+  --color-nav-text-muted: var(--nav-text-muted);
+  --color-nav-hover-bg: var(--nav-hover-bg);
+  --color-nav-icon: var(--nav-icon);
+  --color-shell-border: var(--shell-border);
 }
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* === LIGHT THEME === */
+    --background: #fcfaff;
+    --on-background: #1a1a1f;
+    --surface: #fcfaff;
+    --on-surface: #1a1a1f;
+    /* Better on-surface-variant for light (darker for readability) */
+    --on-surface-variant: #3d3848;
+    --surface-variant: #e6e0eb;
+    --surface-dim: #eeebf4;
+    --surface-bright: #fcfaff;
+    
+    --primary: #6833ea;
+    --primary-container: #ede4ff;
+    --on-primary-container: #1b0060;
+    --inverse-primary: #cdbdff;
+    
+    --secondary: #006874;
+    --secondary-container: #9cf0ff;
+    --on-secondary-container: #001f24;
+    
+    --tertiary: #6c37a9;
+    --tertiary-container: #f1e0ff;
+    
+    --surface-container-lowest: #ffffff;
+    --surface-container-low: #f7f2fb;
+    --surface-container: #f1ecf5;
+    --surface-container-high: #ebe6f0;
+    --surface-container-highest: #e5e1e9;
+    
+    --outline: #948da2;
+    --outline-variant: #cac4cf;
+    
+    --error: #ba1a1a;
+
+    /* Navigation shell - light */
+    --nav-bg: rgba(252, 250, 255, 0.85);
+    --nav-border: rgba(148, 141, 162, 0.2);
+    --nav-text: #1a1a1f;
+    --nav-text-muted: #6b7280;
+    --nav-hover-bg: rgba(104, 51, 234, 0.07);
+    --nav-icon: #6b7280;
+    --shell-border: rgba(148, 141, 162, 0.15);
+    --on-primary: #ffffff;
+    /* Scroll */
+    --scroll-thumb: rgba(148, 141, 162, 0.35);
+    --scroll-thumb-hover: rgba(104, 51, 234, 0.5);
+  }
+
+  .dark {
+    /* === DARK THEME (Obsidian Prism) === */
+    --background: #121315;
+    --on-background: #e3e2e3;
+    --surface: #121315;
+    --on-surface: #e3e2e3;
+    --on-surface-variant: #cbc3d9;
+    --surface-variant: #343536;
+    --surface-dim: #121315;
+    --surface-bright: #38393a;
+    
+    --primary: #cdbdff;
+    --primary-container: #5d21df;
+    --on-primary-container: #cebfff;
+    --inverse-primary: #6833ea;
+    
+    --secondary: #bdf4ff;
+    --secondary-container: #00e3fd;
+    --on-secondary-container: #00616d;
+    
+    --tertiary: #dab9ff;
+    --tertiary-container: #6c37a9;
+    
+    --surface-container-lowest: #0d0e0f;
+    --surface-container-low: #1b1c1d;
+    --surface-container: #1f2021;
+    --surface-container-high: #292a2b;
+    --surface-container-highest: #343536;
+    
+    --outline: #948da2;
+    --outline-variant: #494456;
+    
+    --error: #ffb4ab;
+
+    /* Navigation shell - dark */
+    --nav-bg: rgba(18, 19, 21, 0.75);
+    --nav-border: rgba(255, 255, 255, 0.06);
+    --nav-text: #e3e2e3;
+    --nav-text-muted: #9ca3af;
+    --nav-hover-bg: rgba(255, 255, 255, 0.05);
+    --nav-icon: #9ca3af;
+    --shell-border: rgba(255, 255, 255, 0.06);
+    --on-primary: #121315;
+    /* Scroll */
+    --scroll-thumb: rgba(73, 68, 86, 0.8);
+    --scroll-thumb-hover: rgba(205, 189, 255, 0.4);
+
+    /* Layout Spacing */
+    --sidebar-width: 256px;
+    --topbar-left: 256px;
+  }
+
+  /* Tablets and below: force sidebar to be zero width by default (drawer mode) */
+  @media (max-width: 1023px) {
+    :root, .dark {
+      --sidebar-width: 0px !important;
+      --topbar-left: 0px !important;
+    }
+  }
+
+  /* Reliable Mobile Display Toggle */
+  .oracle-mobile-only {
+    display: none !important;
+  }
+  @media (max-width: 1023px) {
+    .oracle-mobile-only {
+      display: inline-block !important; /* Forces visibility for buttons/divs only on mobile */
+    }
+  }
+
+  body {
+    @apply bg-background text-on-background font-inter antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Enforce consistent scrollbar — thin and theme-aware */
+  .oracle-scroll { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  .oracle-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+  .oracle-scroll::-webkit-scrollbar-track { background: transparent; }
+  .oracle-scroll::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 99px; }
+  .oracle-scroll::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+
+  /* Universal Layout Class */
+  .oracle-main-content {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    transition: margin-left 0.3s ease, width 0.3s ease;
+  }
+  @media (max-width: 1023px) {
+    .oracle-main-content {
+      margin-left: 0 !important;
+      width: 100% !important;
+    }
+  }
+
+  /* Legacy scrollbar alias */
+  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 99px; }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: var(--nav-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-color: var(--nav-border);
+  }
+
+  .nav-shell {
+    background: var(--nav-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-color: var(--nav-border);
+  }
+
+  .nav-text { color: var(--nav-text); }
+  .nav-text-muted { color: var(--nav-text-muted); }
+  .nav-icon { color: var(--nav-icon); }
+  .nav-hover:hover { background: var(--nav-hover-bg); }
+  .shell-border { border-color: var(--shell-border); }
+
+  .active-glow {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .active-glow::after {
+    content: '';
+    position: absolute;
+    bottom: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, var(--primary-container) 0%, transparent 70%);
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Button contrast guarantee — enforced in CSS, not component props */
+  .btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:active { transform: scale(0.95); }
+  .btn-primary:disabled { opacity: 0.5; filter: grayscale(1); }
+
+  /* Dark mode: primary is a light lavender, so text must be dark */
+  .dark .btn-primary { color: #1a1a1f; }
+
+  /* Semantic muted text — replaces all zinc-500 uses */
+  .text-muted { color: var(--nav-text-muted); }
+
+  /* Skeleton pulse */
+  .skeleton-pulse {
+    background: linear-gradient(
+      90deg,
+      var(--surface-container-high) 25%,
+      var(--surface-container-highest) 50%,
+      var(--surface-container-high) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
