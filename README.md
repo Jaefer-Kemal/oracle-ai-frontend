@@ -68,12 +68,15 @@ The script mounts a secure `<iframe>` containing the actual chat application. Th
 - **Oracle Backend** (running and accessible)
 
 ### 2. Environment Configuration
-Create a `.env.local` file at the `/frontend` root:
+Create a `.env.local` file at the `/frontend` root. This is critical for the dashboard and the widget to communicate with the intelligence layer.
 
 ```bash
-# Absolute URL of your Oracle Backend API
+# The absolute production or local URL of your Oracle AI Backend
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
+
+> [!IMPORTANT]
+> Ensure this URL does NOT have a trailing slash (e.g., `https://api.oracle-ai.com`).
 
 ---
 
