@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { clearToken, getUsername, getAvatar } from "@/lib/auth";
 
-export default function Sidebar() {
+function SidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,14 +25,12 @@ export default function Sidebar() {
     loadSessions();
 
     const handleToggle = () => {
-      // Toggle drawer unconditionally since the trigger button is hidden by CSS on desktop
       setIsOpen((prev) => !prev);
     };
     window.addEventListener("toggle-oracle-sidebar", handleToggle);
     return () => window.removeEventListener("toggle-oracle-sidebar", handleToggle);
   }, [pathname]);
 
-  // Close drawer on navigation
   useEffect(() => {
     setIsOpen(false);
   }, [pathname, searchParams]);
@@ -72,7 +70,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Backdrop (Mobile/Tablet) */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[55] oracle-mobile-only animate-in fade-in duration-300"
@@ -83,7 +80,6 @@ export default function Sidebar() {
       <aside className={`fixed left-0 top-16 bottom-0 flex-col border-r shell-border py-6 flex-shrink-0 z-[60] transition-all duration-300 transform overflow-y-auto oracle-scroll bg-background ${
         isOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0 w-64"
       }`}>
-        {/* Branding (Mobile only) */}
         <div className="px-6 mb-8 flex items-center gap-3 oracle-mobile-only">
           <div className="w-8 h-8 bg-primary-container rounded-xl flex items-center justify-center shadow-lg shadow-primary-container/20">
             <span className="material-symbols-outlined text-on-primary-container text-lg">auto_awesome</span>
@@ -92,7 +88,6 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 px-4 overflow-y-auto oracle-scroll space-y-1">
-          {/* Main sections on Mobile */}
           <div className="oracle-mobile-only space-y-1 mb-6 border-b shell-border pb-4 w-full">
             <p className="px-4 text-[10px] nav-text-muted uppercase tracking-widest font-black mb-2">Navigation</p>
             {mainNavOnMobile.map((item) => (
@@ -110,7 +105,6 @@ export default function Sidebar() {
           </div>
 
           {isAdminDashboard ? (
-            /* Admin dashboard nav (Overview, Repo, Ingest, etc.) */
             adminNav.map((item) => {
               const active =
                 (item.href === "/admin/settings" && pathname === "/admin/settings") ||
@@ -134,9 +128,7 @@ export default function Sidebar() {
               );
             })
           ) : (
-            /* Chat / other pages: show Recent Conversations */
             <>
-              {/* Link back to admin if on misc pages */}
               {isMisc && (
                 <Link
                   href="/admin"
@@ -176,7 +168,6 @@ export default function Sidebar() {
           )}
         </nav>
 
-        {/* New Chat button */}
         <div className="px-4 mt-4">
           <button
             onClick={handleNewChat}
@@ -197,7 +188,6 @@ export default function Sidebar() {
             <span>Help</span>
           </Link>
           
-          {/* Mobile Profile & Logout */}
           <div className="oracle-mobile-only pt-4 mt-4 border-t shell-border space-y-1 w-full">
             <div className="flex items-center gap-3 px-4 py-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-xl border border-primary/20">
@@ -227,5 +217,15 @@ export default function Sidebar() {
         </div>
       </aside>
     </>
+  );
+}
+
+import { Suspense } from "react";
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={<div className="fixed left-0 top-16 bottom-0 w-64 bg-background border-r shell-border animate-pulse" />}>
+      <SidebarContent />
+    </Suspense>
   );
 }

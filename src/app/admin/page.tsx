@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
@@ -9,7 +9,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { isLoggedIn, addNotification, tryRefreshToken } from "@/lib/auth";
 
-export default function AdminDashboard() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") || "overview";
@@ -813,7 +813,11 @@ export default function AdminDashboard() {
                             </span>
                             <span className="text-[10px] font-mono text-on-surface-variant/30">{sess.id.slice(0, 12)}...</span>
                           </td>
-                          <td className="px-4 py-4"><Badge label={sess.is_internal ? 'Admin' : 'Public'} color={sess.is_internal ? 'primary' : 'orange'} /></td>
+                          <td className="px-4 py-4">
+                            <span className={`text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-lg ${sess.is_internal ? 'bg-primary/10 text-primary' : 'bg-orange-500/10 text-orange-600'}`}>
+                              {sess.is_internal ? 'Admin' : 'Public'}
+                            </span>
+                          </td>
                           <td className="px-4 py-4 text-right pr-6 text-[11px] font-bold text-on-surface-variant/60">{new Date(sess.updated_at).toLocaleDateString()}</td>
                           <td className="px-4 py-4">
                             <button
@@ -1338,5 +1342,13 @@ function StatCard({ title, value, icon, color, glow }: any) {
         <div className={`w-12 h-12 ${glow} rounded-2xl flex items-center justify-center`}><span className={`material-symbols-outlined ${color} text-2xl`}>{icon}</span></div>
       </div>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
