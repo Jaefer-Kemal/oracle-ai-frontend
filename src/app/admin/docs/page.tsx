@@ -302,7 +302,7 @@ export default function DocsPage() {
             <section id="api" className="space-y-6 scroll-mt-8">
               <SectionHead icon="data_object" title="API Reference" />
               <Prose>
-                The Oracle backend exposes a RESTful API at <code className="bg-surface-container px-1.5 py-0.5 rounded text-primary text-xs font-mono">http://localhost:8000</code>. Interactive docs at <code className="bg-surface-container px-1.5 py-0.5 rounded text-primary text-xs font-mono">/docs</code> (Swagger UI).
+                The Oracle backend exposes a RESTful API at <code className="bg-surface-container px-1.5 py-0.5 rounded text-primary text-xs font-mono">{process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}</code>. Interactive docs at <code className="bg-surface-container px-1.5 py-0.5 rounded text-primary text-xs font-mono">/docs</code> (Swagger UI).
               </Prose>
               <div className="space-y-4">
                 {[

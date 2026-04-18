@@ -1,6 +1,6 @@
 import { getToken } from "@/lib/auth";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function authH(): Record<string, string> {
   const t = typeof window !== "undefined" ? getToken() : null;

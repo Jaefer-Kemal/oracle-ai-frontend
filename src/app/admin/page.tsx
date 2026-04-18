@@ -195,7 +195,7 @@ function DashboardContent() {
         const formData = new FormData();
         formData.append("file", selectedFile);
         formData.append("category", "General");
-        xhr.open("POST", "http://localhost:8000/ingest");
+        xhr.open("POST", (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/ingest");
         const token = typeof window !== "undefined" ? localStorage.getItem("oracle_token") : null;
         if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
         xhr.upload.onprogress = (e) => {
