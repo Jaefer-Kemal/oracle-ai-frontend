@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import SecurityProvider from "@/components/providers/SecurityProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -26,7 +27,9 @@ export default function RootLayout({
         />
       </head>
       <body className="h-full bg-background text-on-background selection:bg-primary/30" suppressHydrationWarning>
-        {children}
+        <SecurityProvider>
+          {children}
+        </SecurityProvider>
       </body>
     </html>
   );

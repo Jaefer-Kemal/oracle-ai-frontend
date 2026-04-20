@@ -4,23 +4,25 @@ const EXPIRY_KEY = "oracle_token_exp";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token: string, username: string, expiresIn: number = 3600): void {
-  // Store access token in sessionStorage (tab-scoped, not persistent across tabs but not on disk)
-  // Also in localStorage for middleware cookie check compatibility
+  // Store access token in sessionStorage (tab-scoped, not persistent across tabs)
   sessionStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, username);
+  sessionStorage.setItem(USER_KEY, username);
   // Record expiry time
-  localStorage.setItem(EXPIRY_KEY, String(Date.now() + expiresIn * 1000));
+  sessionStorage.setItem(EXPIRY_KEY, String(Date.now() + expiresIn * 1000));
   // Set cookie for middleware
   document.cookie = `oracle_token=${token}; path=/; max-age=${expiresIn}; SameSite=Lax`;
 }
 
 export function clearToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(EXPIRY_KEY);
+  
+  // Clean up legacy localStorage if still present
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(EXPIRY_KEY);
@@ -30,11 +32,11 @@ export function clearToken(): void {
 
 export function getUsername(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("oracle_display_name") || localStorage.getItem(USER_KEY);
+  return sessionStorage.getItem(USER_KEY);
 }
 
 export function getTokenExpiry(): number {
-  const exp = localStorage.getItem(EXPIRY_KEY);
+  const exp = sessionStorage.getItem(EXPIRY_KEY);
   return exp ? parseInt(exp) : 0;
 }
 
@@ -93,7 +95,7 @@ export function setAvatar(a: string): void {
 export interface Notification {
   id: string;
   message: string;
-  type: "success" | "info" | "warning";
+  type: "success" | "info" | "warning" | "error";
   time: string;
   read: boolean;
 }
@@ -111,4 +113,19 @@ export function addNotification(msg: string, type: Notification["type"] = "info"
 export function markAllRead(): void {
   // User requested "remove it" when marking all as read
   localStorage.setItem("oracle_notifications", "[]");
+}
+
+/**
+ * Cleanup legacy storage on app startup to ensure no leaked PII/Secrets remain on disk
+ */
+export function performLegacyCleanup(): void {
+  if (typeof window === "undefined") return;
+  const legacyKeys = [TOKEN_KEY, USER_KEY, EXPIRY_KEY, "oracle_guest_messages", "oracle_guest_session"];
+  legacyKeys.forEach(k => {
+    // Only remove if we find them in localStorage specifically
+    if (localStorage.getItem(k)) {
+      console.log(`[Security] Purging legacy localStorage key: ${k}`);
+      localStorage.removeItem(k);
+    }
+  });
 }

@@ -4,19 +4,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
 
-const LS_KEY = "oracle_guest_messages";
 const LS_SESSION_KEY = "oracle_guest_session";
-const MAX_STORED = 4;
 
 interface Msg { role: "user" | "assistant"; content: string; }
-
-function loadFromStorage(): Msg[] {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); }
-  catch { return []; }
-}
-function saveToStorage(msgs: Msg[]) {
-  localStorage.setItem(LS_KEY, JSON.stringify(msgs.slice(-MAX_STORED * 2)));
-}
 
 export default function IframeChat() {
   const [input, setInput] = useState("");
@@ -28,7 +18,7 @@ export default function IframeChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Session management
+    // Session management - Persist ID only to allow resuming chat
     let currentSid = localStorage.getItem(LS_SESSION_KEY);
     if (!currentSid) {
       currentSid = crypto.randomUUID();
@@ -36,14 +26,29 @@ export default function IframeChat() {
     }
     setSessionId(currentSid);
 
-    // Restore localStorage messages
-    const stored = loadFromStorage();
-    api.getGreeting().then((d) => {
-      const greeting: Msg = { role: "assistant", content: d.greeting };
-      setMessages(stored.length > 0 ? [greeting, ...stored] : [greeting]);
-    }).catch(() => {
-      setMessages(loadFromStorage());
-    });
+    // Initial load: Fetch Greeting + DB History
+    const init = async () => {
+      try {
+        const [greetData, historyData] = await Promise.all([
+          api.getGreeting(),
+          api.getSessionHistory(currentSid!, true) // Pass true for public history
+        ]);
+        
+        const greeting: Msg = { role: "assistant", content: greetData.greeting };
+        const dbMsgs: Msg[] = historyData.flatMap((h: any) => [
+          { role: "user", content: h.query },
+          { role: "assistant", content: h.answer }
+        ]);
+        
+        setMessages([greeting, ...dbMsgs]);
+      } catch (err) {
+        console.error("Failed to initialize iframe chat", err);
+        // Fallback to greeting if history fails
+        api.getGreeting().then(d => setMessages([{ role: "assistant", content: d.greeting }])).catch(() => {});
+      }
+    };
+
+    init();
     api.getSuggestions().then((d) => setSuggestions(d.suggestions || [])).catch(() => {});
   }, []);
 
@@ -51,10 +56,9 @@ export default function IframeChat() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const persistAndSet = (msgs: Msg[]) => {
+  // Local state update only - Persistence is handled on the server side during api.query
+  const setLocalMessages = (msgs: Msg[]) => {
     setMessages(msgs);
-    const toSave = msgs.filter(m => m.content !== messages[0]?.content);
-    saveToStorage(toSave);
   };
 
   const handleSend = async (text?: string) => {
@@ -70,12 +74,12 @@ export default function IframeChat() {
     }, []);
 
     const newMsgs: Msg[] = [...messages, { role: "user", content: msg }];
-    persistAndSet(newMsgs);
+    setLocalMessages(newMsgs);
     setLoading(true);
 
     try {
       const res = await api.query(msg, sessionId, false, history);
-      persistAndSet([...newMsgs, { role: "assistant", content: res.answer || "I couldn't generate an answer." }]);
+      setLocalMessages([...newMsgs, { role: "assistant", content: res.answer || "I couldn't generate an answer." }]);
       
       if (res.follow_ups && res.follow_ups.length > 0) {
         setDynamicSuggestions(res.follow_ups);
@@ -83,7 +87,7 @@ export default function IframeChat() {
         setDynamicSuggestions([]);
       }
     } catch {
-      persistAndSet([...newMsgs, { role: "assistant", content: "Sorry, I couldn't connect to the server." }]);
+      setLocalMessages([...newMsgs, { role: "assistant", content: "Sorry, I couldn't connect to the server." }]);
       setDynamicSuggestions([]);
     } finally {
       setLoading(false);
@@ -91,7 +95,6 @@ export default function IframeChat() {
   };
 
   const handleNew = () => {
-    localStorage.removeItem(LS_KEY);
     localStorage.removeItem("oracle_used_suggestions"); // Reset discovery for new guest session
     window.dispatchEvent(new Event("oracle-reset"));
     const newSid = crypto.randomUUID();

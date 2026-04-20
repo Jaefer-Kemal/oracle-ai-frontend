@@ -72,7 +72,16 @@ function DashboardContent() {
   const [synergy, setSynergy] = useState<any[]>([]);
   const [checking, setChecking] = useState(false);
 
+  // Action Workflow State
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [bulkAction, setBulkAction] = useState<{
+    type: 'archive-docs' | 'restore-docs' | 'destroy-docs' | 'delete-sessions';
+    ids: (string | number)[];
+    label: string;
+    confirmLabel: string;
+    loadingLabel: string;
+  } | null>(null);
 
   // Ingest toast state: { type: 'success'|'skipped'|'restored'|'error', message: string }
   const [ingestToast, setIngestToast] = useState<{ type: 'success'|'skipped'|'restored'|'error'; message: string } | null>(null);
@@ -256,9 +265,54 @@ function DashboardContent() {
   };
 
   const handleSoftDelete = async (id: number) => {
-     await api.deleteDocument(id);
-     setDeleteId(null);
-     refreshData();
+    setActionLoading(true);
+    try {
+      await api.deleteDocument(id);
+      addNotification("Document moved to trash", "success");
+      setDeleteId(null);
+      await loadDocuments(repoPage, repoSearch, repoType);
+      await refreshData();
+    } catch (e) {
+      addNotification("Failed to archive document", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!bulkAction) return;
+    setActionLoading(true);
+    try {
+      const { type, ids } = bulkAction;
+      if (type === 'archive-docs') {
+        await api.bulkDeleteDocuments(ids as number[]);
+        addNotification(`${ids.length} documents archived`, "success");
+        setSelectedDocs(new Set());
+      } else if (type === 'delete-sessions') {
+        await api.bulkDeleteSessions(ids as string[]);
+        addNotification(`${ids.length} sessions deleted`, "success");
+        setSelectedAudit(new Set());
+      } else if (type === 'restore-docs') {
+        for (const id of ids) await api.restoreDocument(id as number);
+        addNotification(`${ids.length} documents restored`, "success");
+        setSelectedTrash(new Set());
+      } else if (type === 'destroy-docs') {
+        for (const id of ids) await api.permanentDelete(id as number);
+        addNotification(`${ids.length} documents permanently destroyed`, "warning");
+        setSelectedTrash(new Set());
+      }
+      
+      // Close and refresh
+      setBulkAction(null);
+      await refreshData();
+      if (tab === "docs") await loadDocuments(repoPage, repoSearch, repoType);
+      if (tab === "audit") await loadAuditSessions(auditPage, auditScope, auditSort);
+      if (tab === "trash") await loadTrash(trashPage, trashFilter, trashType);
+    } catch (e) {
+      addNotification("Bulk operation failed", "error");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleConfigSave = async () => {
@@ -385,8 +439,14 @@ function DashboardContent() {
                   <div className="flex items-center gap-4 bg-primary/10 border border-primary/30 rounded-2xl px-5 py-3 animate-in fade-in duration-200">
                     <span className="text-sm font-bold text-primary">{selectedDocs.size} selected</span>
                     <button
-                      onClick={async () => { await api.bulkDeleteDocuments(Array.from(selectedDocs) as number[]); setSelectedDocs(new Set()); addNotification(`${selectedDocs.size} documents archived`, "info"); refreshData(); }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-error/10 text-error text-xs font-bold rounded-xl hover:bg-error/20 transition-all"
+                      onClick={() => setBulkAction({
+                        type: 'archive-docs',
+                        ids: Array.from(selectedDocs) as number[],
+                        label: `Are you sure you want to archive ${selectedDocs.size} documents? They will be moved to the Trash.`,
+                        confirmLabel: "Archive All",
+                        loadingLabel: "Archiving..."
+                      })}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-error/10 text-error text-xs font-bold rounded-xl hover:bg-error/20 transition-all border border-error/20"
                     >
                       <span className="material-symbols-outlined text-sm">delete</span> Archive Selected
                     </button>
@@ -759,8 +819,14 @@ function DashboardContent() {
                   <div className="flex items-center gap-4 bg-primary/10 border border-primary/30 rounded-2xl px-5 py-3 animate-in fade-in duration-200">
                     <span className="text-sm font-bold text-primary">{selectedAudit.size} selected</span>
                     <button
-                      onClick={async () => { await api.bulkDeleteSessions(Array.from(selectedAudit) as string[]); setSelectedAudit(new Set()); addNotification(`${selectedAudit.size} sessions deleted`, "info"); loadAuditSessions(1, auditScope, auditSort); }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-error/10 text-error text-xs font-bold rounded-xl hover:bg-error/20 transition-all"
+                      onClick={() => setBulkAction({
+                        type: 'delete-sessions',
+                        ids: Array.from(selectedAudit) as string[],
+                        label: `Delete ${selectedAudit.size} selected chat sessions permanently? This cannot be undone.`,
+                        confirmLabel: "Delete Forever",
+                        loadingLabel: "Deleting..."
+                      })}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-error/10 text-error text-xs font-bold rounded-xl hover:bg-error/20 transition-all border border-error/20"
                     >
                       <span className="material-symbols-outlined text-sm">delete</span> Delete Selected
                     </button>
@@ -821,7 +887,16 @@ function DashboardContent() {
                           <td className="px-4 py-4 text-right pr-6 text-[11px] font-bold text-on-surface-variant/60">{new Date(sess.updated_at).toLocaleDateString()}</td>
                           <td className="px-4 py-4">
                             <button
-                              onClick={async (e) => { e.stopPropagation(); await api.deleteSession(sess.id); setSelectedAudit(s => { const n = new Set(s); n.delete(sess.id); return n; }); loadAuditSessions(auditPage, auditScope, auditSort); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setBulkAction({
+                                  type: 'delete-sessions',
+                                  ids: [sess.id],
+                                  label: "Delete this chat session permanently? This cannot be undone.",
+                                  confirmLabel: "Delete Session",
+                                  loadingLabel: "Deleting..."
+                                });
+                              }}
                               className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-error/10 text-error/70 hover:text-error transition-all material-symbols-outlined text-sm"
                             >delete</button>
                           </td>
@@ -893,15 +968,28 @@ function DashboardContent() {
                   <div className="flex items-center gap-4 bg-error/10 border border-error/30 rounded-2xl px-5 py-3 animate-in fade-in duration-200">
                     <span className="text-sm font-bold text-error">{selectedTrash.size} selected</span>
                     <button
-                      onClick={async () => {
-                        for (const id of selectedTrash) await api.permanentDelete(id);
-                        setSelectedTrash(new Set());
-                        addNotification(`${selectedTrash.size} items permanently destroyed`, "warning");
-                        refreshData();
-                      }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-error/20 text-error text-xs font-bold rounded-xl hover:bg-error/30 transition-all"
+                      onClick={() => setBulkAction({
+                        type: 'destroy-docs',
+                        ids: Array.from(selectedTrash) as number[],
+                        label: `Permanently destroy ${selectedTrash.size} items? This will wipe them from both the database and vector index.`,
+                        confirmLabel: "Destroy Forever",
+                        loadingLabel: "Destroying..."
+                      })}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-error/10 text-error text-xs font-bold rounded-xl hover:bg-error/20 transition-all border border-error/20"
                     >
                       <span className="material-symbols-outlined text-sm">delete_forever</span> Destroy Selected
+                    </button>
+                    <button
+                      onClick={() => setBulkAction({
+                        type: 'restore-docs',
+                        ids: Array.from(selectedTrash) as number[],
+                        label: `Restore ${selectedTrash.size} selected items back to the active knowledge base?`,
+                        confirmLabel: "Restore All",
+                        loadingLabel: "Restoring..."
+                      })}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 text-primary text-xs font-bold rounded-xl hover:bg-primary/20 transition-all border border-primary/20"
+                    >
+                      <span className="material-symbols-outlined text-sm">restore</span> Restore Selected
                     </button>
                     <button onClick={() => setSelectedTrash(new Set())} className="ml-auto text-xs text-on-surface-variant hover:text-on-surface">Clear</button>
                   </div>
@@ -945,13 +1033,25 @@ function DashboardContent() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
-                            onClick={async () => { await api.restoreDocument(doc.id); refreshData(); }}
+                            onClick={() => setBulkAction({
+                              type: 'restore-docs',
+                              ids: [doc.id],
+                              label: "Restore this document to the knowledge base?",
+                              confirmLabel: "Restore",
+                              loadingLabel: "Restoring..."
+                            })}
                             className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-on-surface bg-surface-container rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
                           >
                             <span className="material-symbols-outlined text-sm">restore</span> Restore
                           </button>
                           <button
-                            onClick={async () => { await api.permanentDelete(doc.id); refreshData(); }}
+                            onClick={() => setBulkAction({
+                              type: 'destroy-docs',
+                              ids: [doc.id],
+                              label: "Permanently destroy this item? This will wipe it from both the database and vector index.",
+                              confirmLabel: "Destroy Forever",
+                              loadingLabel: "Destroying..."
+                            })}
                             className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-error/80 bg-error/5 rounded-xl hover:bg-error/10 transition-all"
                           >
                             <span className="material-symbols-outlined text-sm">delete_forever</span> Destroy
@@ -1247,11 +1347,92 @@ function DashboardContent() {
          </div>
       </Modal>
 
-      <Modal isOpen={deleteId !== null} onClose={() => setDeleteId(null)} title="Knowledge Deletion">
-        <p className="text-zinc-400 mb-8">Move this item to the Archive? You can restore it later.</p>
-        <div className="flex justify-end gap-3">
-          <button onClick={() => setDeleteId(null)} className="px-6 py-2 text-zinc-500 font-bold">Cancel</button>
-          <button onClick={() => deleteId && handleSoftDelete(deleteId)} className="bg-error text-white px-8 py-2 rounded-xl font-bold">Confirm Archive</button>
+      {/* Single Delete Confirmation */}
+      <Modal 
+        isOpen={deleteId !== null} 
+        onClose={() => !actionLoading && setDeleteId(null)} 
+        title="Archive Document"
+        footer={(
+          <>
+            <button 
+              onClick={() => setDeleteId(null)} 
+              disabled={actionLoading}
+              className="px-6 py-2 text-on-surface-variant font-bold hover:text-on-surface transition-colors disabled:opacity-30"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={() => deleteId && handleSoftDelete(deleteId)} 
+              disabled={actionLoading}
+              className="btn-error px-8 py-2.5 rounded-xl font-bold min-w-[140px]"
+            >
+              {actionLoading ? (
+                <>
+                  <span className="material-symbols-outlined text-sm animate-spin mr-2">refresh</span>
+                  Archiving...
+                </>
+              ) : (
+                "Confirm Archive"
+              )}
+            </button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <div className="w-16 h-16 bg-error/10 rounded-2xl flex items-center justify-center text-error mx-auto">
+            <span className="material-symbols-outlined text-3xl">inventory_2</span>
+          </div>
+          <div className="text-center">
+            <p className="text-on-surface font-medium">Are you sure you want to archive this document?</p>
+            <p className="text-xs text-on-surface-variant/60 mt-2">It will be moved to the Trash and can be restored later.</p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Bulk Action Confirmation */}
+      <Modal
+        isOpen={bulkAction !== null}
+        onClose={() => !actionLoading && setBulkAction(null)}
+        title="Confirm Operation"
+        footer={(
+          <>
+            <button 
+              onClick={() => setBulkAction(null)} 
+              disabled={actionLoading}
+              className="px-6 py-2 text-on-surface-variant font-bold hover:text-on-surface transition-colors disabled:opacity-30"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleBulkAction}
+              disabled={actionLoading}
+              className={`${bulkAction?.type === 'restore-docs' ? 'btn-primary' : 'btn-error'} px-8 py-2.5 rounded-xl font-bold min-w-[140px]`}
+            >
+              {actionLoading ? (
+                <>
+                  <span className="material-symbols-outlined text-sm animate-spin mr-2">refresh</span>
+                  {bulkAction?.loadingLabel}
+                </>
+              ) : (
+                bulkAction?.confirmLabel
+              )}
+            </button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+            bulkAction?.type === 'restore-docs' ? 'bg-primary/10 text-primary' : 'bg-error/10 text-error'
+          }`}>
+            <span className="material-symbols-outlined text-3xl">
+              {bulkAction?.type === 'archive-docs' ? 'inventory_2' : 
+               bulkAction?.type === 'restore-docs' ? 'restore_from_trash' : 
+               bulkAction?.type === 'delete-sessions' ? 'chat_off' : 'delete_forever'}
+            </span>
+          </div>
+          <div className="text-center">
+            <p className="text-on-surface font-medium leading-relaxed">{bulkAction?.label}</p>
+          </div>
         </div>
       </Modal>
     </div>

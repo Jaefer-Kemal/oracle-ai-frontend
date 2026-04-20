@@ -61,7 +61,7 @@
     --surface: #fcfaff;
     --on-surface: #1a1a1f;
     /* Better on-surface-variant for light (darker for readability) */
-    --on-surface-variant: #3d3848;
+    --on-surface-variant: #2d2936;
     --surface-variant: #e6e0eb;
     --surface-dim: #eeebf4;
     --surface-bright: #fcfaff;
@@ -109,7 +109,7 @@
     --on-background: #e3e2e3;
     --surface: #121315;
     --on-surface: #e3e2e3;
-    --on-surface-variant: #cbc3d9;
+    --on-surface-variant: #d4cedf;
     --surface-variant: #343536;
     --surface-dim: #121315;
     --surface-bright: #38393a;
@@ -275,7 +275,25 @@
   .btn-primary:disabled { opacity: 0.5; filter: grayscale(1); }
 
   /* Dark mode: primary is a light lavender, so text must be dark */
-  .dark .btn-primary { color: #1a1a1f; }
+  .dark .btn-primary { color: #121315; }
+
+  .btn-error {
+    background-color: var(--error);
+    color: #ffffff;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--error) 20%, transparent);
+  }
+  .btn-error:hover { filter: brightness(1.1); }
+  .btn-error:active { transform: scale(0.95); }
+  .btn-error:disabled { opacity: 0.5; filter: grayscale(1); }
 
   /* Semantic muted text — replaces all zinc-500 uses */
   .text-muted { color: var(--nav-text-muted); }

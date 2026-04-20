@@ -27,8 +27,9 @@ export const api = {
     return res.json();
   },
 
-  async getSessionHistory(sessionId: string) {
-    const res = await fetch(`${API_BASE}/sessions/${sessionId}`, { headers: authH() });
+  async getSessionHistory(sessionId: string, isPublic = false) {
+    const url = isPublic ? `${API_BASE}/public/sessions/${sessionId}/history` : `${API_BASE}/sessions/${sessionId}`;
+    const res = await fetch(url, { headers: isPublic ? {} : authH() });
     return res.json();
   },
 
