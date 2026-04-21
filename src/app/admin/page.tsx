@@ -110,8 +110,6 @@ function DashboardContent() {
         setFallbackChain(JSON.parse(cData.fallback_chain || '["grok", "gemini"]'));
       } catch { setFallbackChain(["grok", "gemini"]); }
       
-      setGemini1psid(cData.gemini_1psid || "");
-      setGemini1psidts(cData.gemini_1psidts || "");
       setDisplayName(cData.admin_display_name || "Administrator");
 
       // Populate suggestion inputs from saved config
@@ -129,8 +127,6 @@ function DashboardContent() {
   // --- Consistently Managed AI & Identity States ---
   const [activeProvider, setActiveProvider] = useState("grok");
   const [fallbackChain, setFallbackChain] = useState(["grok", "gemini"]);
-  const [gemini1psid, setGemini1psid] = useState("");
-  const [gemini1psidts, setGemini1psidts] = useState("");
   const [aiSaving, setAiSaving] = useState(false);
 
   const [displayName, setDisplayName] = useState("");
@@ -143,7 +139,7 @@ function DashboardContent() {
 
   const PROVIDERS = [
     { id: "grok", name: "Grok", icon: "psychology", desc: "xAI - High reasoning & web access" },
-    { id: "gemini", name: "Gemini", icon: "smart_toy", desc: "Google - Fast & creative (requires cookies)" },
+    { id: "gemini", name: "Gemini", icon: "smart_toy", desc: "Google - Official API (High Speed)" },
     { id: "g4f", name: "G4F", icon: "cloud_done", desc: "Community - Free & high-redundancy fallback" }
   ];
 
@@ -159,8 +155,6 @@ function DashboardContent() {
 
       await api.updateConfig({
         active_provider: activeProvider,
-        gemini_1psid: gemini1psid,
-        gemini_1psidts: gemini1psidts,
         greeting_message: greeting,
         fallback_message: fallback,
         similarity_threshold: threshold,
@@ -1305,42 +1299,6 @@ function DashboardContent() {
                     {/* Left: Cookies & suggestions (3/5) */}
                     <div className="lg:col-span-3 space-y-8">
                       
-                      {/* Gemini Cookies */}
-                      <div className="bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
-                         <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3">
-                          <div className="w-9 h-9 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
-                            <span className="material-symbols-outlined text-lg">cookie</span>
-                          </div>
-                          <h3 className="text-base font-black text-on-surface">Provider Credentials</h3>
-                        </div>
-                        <div className="p-7 space-y-4">
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Gemini __Secure-1PSID</label>
-                            <textarea
-                              value={gemini1psid}
-                              onChange={(e) => setGemini1psid(e.target.value)}
-                              rows={1}
-                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-[10px] font-mono outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                              placeholder="g.a000..."
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Gemini __Secure-1PSIDTS</label>
-                            <textarea
-                              value={gemini1psidts}
-                              onChange={(e) => setGemini1psidts(e.target.value)}
-                              rows={1}
-                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-[10px] font-mono outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                              placeholder="sidts.a000..."
-                            />
-                          </div>
-                          <p className="text-[9px] text-on-surface-variant/40 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">info</span>
-                            Cookies are required for Gemini (Web) access. Update and save AI strategy above.
-                          </p>
-                        </div>
-                      </div>
-
                       {/* Chat Suggestions */}
                       <div className="bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
                         <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3 text-secondary">
