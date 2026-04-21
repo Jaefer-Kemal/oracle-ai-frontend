@@ -57,7 +57,6 @@ function SidebarContent() {
     { id: "audit", label: "Audit Logs", icon: "history_edu", href: "/admin?tab=audit" },
     { id: "trash", label: "Trash", icon: "delete_sweep", href: "/admin?tab=trash" },
     { id: "config", label: "System", icon: "settings_input_component", href: "/admin?tab=config" },
-    { id: "settings", label: "Settings", icon: "manage_accounts", href: "/admin/settings" },
   ];
 
   const mainNavOnMobile = [
@@ -107,7 +106,6 @@ function SidebarContent() {
           {isAdminDashboard ? (
             adminNav.map((item) => {
               const active =
-                (item.href === "/admin/settings" && pathname === "/admin/settings") ||
                 (item.href.includes("?tab=") && tab === item.id) ||
                 (item.id === "overview" && !searchParams.get("tab") && pathname === "/admin");
               return (
@@ -198,10 +196,6 @@ function SidebarContent() {
                 <p className="text-[10px] text-on-surface-variant/60">Administrator</p>
               </div>
             </div>
-            <Link href="/admin/settings" className="flex items-center gap-3 px-4 py-2.5 nav-text-muted nav-hover rounded-xl text-sm font-medium transition-colors">
-              <span className="material-symbols-outlined text-lg nav-icon">settings</span>
-              <span>Account Settings</span>
-            </Link>
             <button 
               onClick={() => {
                 clearToken();

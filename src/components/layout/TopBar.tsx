@@ -218,12 +218,12 @@ export default function TopBar({ noSidebar = false }: { noSidebar?: boolean }) {
 
                   <div className="p-2">
                     <Link
-                      href="/admin/settings"
+                      href="/admin?tab=config"
                       onClick={() => setShowProfile(false)}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-container text-on-surface transition-all text-sm"
                     >
-                      <span className="material-symbols-outlined text-on-surface-variant text-sm">manage_accounts</span>
-                      Account Settings
+                      <span className="material-symbols-outlined text-on-surface-variant text-sm">settings</span>
+                      System Parameters
                     </Link>
                     <button
                       onClick={handleLogout}

@@ -103,6 +103,17 @@ function DashboardContent() {
       ]);
       setStats(sData);
       setConfig(cData);
+      
+      // Populate AI and Identity states
+      setActiveProvider(cData.active_provider || "grok");
+      try {
+        setFallbackChain(JSON.parse(cData.fallback_chain || '["grok", "gemini"]'));
+      } catch { setFallbackChain(["grok", "gemini"]); }
+      
+      setGemini1psid(cData.gemini_1psid || "");
+      setGemini1psidts(cData.gemini_1psidts || "");
+      setDisplayName(cData.admin_display_name || "Administrator");
+
       // Populate suggestion inputs from saved config
       try {
         const savedSuggestions = JSON.parse(cData.suggested_questions || "[]");
@@ -112,6 +123,86 @@ function DashboardContent() {
       console.error("Failed to load admin data", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- Consistently Managed AI & Identity States ---
+  const [activeProvider, setActiveProvider] = useState("grok");
+  const [fallbackChain, setFallbackChain] = useState(["grok", "gemini"]);
+  const [gemini1psid, setGemini1psid] = useState("");
+  const [gemini1psidts, setGemini1psidts] = useState("");
+  const [aiSaving, setAiSaving] = useState(false);
+
+  const [displayName, setDisplayName] = useState("");
+  const [currentPass, setCurrentPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [identitySaving, setIdentitySaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const PROVIDERS = [
+    { id: "grok", name: "Grok", icon: "psychology", desc: "xAI - High reasoning & web access" },
+    { id: "gemini", name: "Gemini", icon: "smart_toy", desc: "Google - Fast & creative (requires cookies)" },
+    { id: "g4f", name: "G4F", icon: "cloud_done", desc: "Community - Free & high-redundancy fallback" }
+  ];
+
+  const handleSaveAiConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAiSaving(true);
+    try {
+      const form = e.currentTarget as HTMLFormElement;
+      const greeting = (form.querySelector("[name=greeting]") as HTMLTextAreaElement)?.value;
+      const fallback = (form.querySelector("[name=fallback]") as HTMLTextAreaElement)?.value;
+      const threshold = (form.querySelector("[name=threshold]") as HTMLInputElement)?.value;
+      const model = (form.querySelector("[name=grok_model]") as HTMLSelectElement)?.value;
+
+      await api.updateConfig({
+        active_provider: activeProvider,
+        gemini_1psid: gemini1psid,
+        gemini_1psidts: gemini1psidts,
+        greeting_message: greeting,
+        fallback_message: fallback,
+        similarity_threshold: threshold,
+        grok_model: model
+      });
+      addNotification("AI configuration updated", "success");
+      refreshData();
+    } catch (err) {
+      addNotification("Failed to update AI config", "error");
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
+  const handleSaveIdentity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setIdentitySaving(true);
+
+    if (newPass && newPass !== confirmPass) {
+      setError("New passwords do not match");
+      setIdentitySaving(false);
+      return;
+    }
+
+    try {
+      const updates: any = { admin_display_name: displayName };
+      if (currentPass && newPass) {
+        updates.current_password = currentPass;
+        updates.new_password = newPass;
+      }
+      await api.updateConfig(updates);
+      setSuccess("Profile updated successfully");
+      setCurrentPass("");
+      setNewPass("");
+      setConfirmPass("");
+      refreshData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Update failed");
+    } finally {
+      setIdentitySaving(false);
     }
   };
 
@@ -1090,174 +1181,240 @@ function DashboardContent() {
             )}
 
             {tab === "config" && (
-              <section className="animate-in fade-in duration-300">
-                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 max-w-6xl">
-
-                  {/* Left: Core settings form (3/5 width) */}
-                  <div className="xl:col-span-3 bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
+              <section className="animate-in fade-in duration-500 pb-20">
+                <div className="max-w-6xl space-y-10">
+                  
+                  {/* --- Main AI Engine Configuration --- */}
+                  <div className="bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
                     <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3">
                       <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <span className="material-symbols-outlined text-primary text-lg">settings_input_component</span>
+                        <span className="material-symbols-outlined text-primary text-lg">settings_suggest</span>
                       </div>
                       <div>
-                        <h3 className="text-base font-black text-on-surface">System Parameters</h3>
-                        <p className="text-[11px] text-on-surface-variant/60">AI persona, fallback behaviour, and search sensitivity</p>
+                        <h3 className="text-base font-black text-on-surface">AI Model & Strategy</h3>
+                        <p className="text-[11px] text-on-surface-variant/60">Configure primary engine and reasoning thresholds</p>
                       </div>
                     </div>
-                    {loading ? <div className="p-7"><Skeleton className="h-72 rounded-2xl" /></div> : (
-                      <form onSubmit={async (e) => {
-                        e.preventDefault();
-                        const form = e.currentTarget;
-                        const greeting = (form.querySelector("[name=greeting]") as HTMLTextAreaElement)?.value;
-                        const fallback = (form.querySelector("[name=fallback]") as HTMLTextAreaElement)?.value;
-                        const threshold = (form.querySelector("[name=threshold]") as HTMLInputElement)?.value;
-                        const model = (form.querySelector("[name=grok_model]") as HTMLSelectElement)?.value;
-                        await api.updateConfig({ 
-                          greeting_message: greeting, 
-                          fallback_message: fallback, 
-                          similarity_threshold: threshold,
-                          grok_model: model 
-                        });
-                        addNotification("System parameters saved", "success");
-                        refreshData();
-                      }} className="p-7 space-y-6">
 
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">AI Persona Greeting</label>
-                          <textarea
-                            name="greeting"
-                            defaultValue={config?.greeting_message}
-                            rows={3}
-                            className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all resize-none placeholder:text-on-surface-variant/30"
-                            placeholder="Hello! How can I help you today?"
-                          />
-                          <p className="text-[10px] text-on-surface-variant/40">This message is shown when a user first opens the chat.</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Fallback Message</label>
-                          <textarea
-                            name="fallback"
-                            defaultValue={config?.fallback_message}
-                            rows={3}
-                            className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all resize-none placeholder:text-on-surface-variant/30"
-                            placeholder="I'm sorry, I couldn't find information on that."
-                          />
-                          <p className="text-[10px] text-on-surface-variant/40">Shown when no relevant documents are found in the knowledge base.</p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Semantic Threshold</label>
-                            <span className="text-sm font-black text-primary" id="thresh-display">{config?.similarity_threshold || "0.5"}</span>
+                    <form onSubmit={handleSaveAiConfig} className="p-7 space-y-8">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        
+                        {/* Left: Provider Selection */}
+                        <div className="space-y-6">
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Active Primary Engine</label>
+                            <div className="grid grid-cols-1 gap-2">
+                              {PROVIDERS.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => setActiveProvider(p.id)}
+                                  className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
+                                    activeProvider === p.id 
+                                      ? "bg-primary/10 border-primary shadow-sm" 
+                                      : "bg-surface-container-lowest border-outline-variant/10 hover:border-outline-variant/30"
+                                  }`}
+                                >
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeProvider === p.id ? "bg-primary text-white dark:text-zinc-950" : "bg-surface-container-high text-on-surface-variant"}`}>
+                                    <span className="material-symbols-outlined text-lg">{p.icon}</span>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className={`text-sm font-bold ${activeProvider === p.id ? "text-primary" : "text-on-surface"}`}>{p.name}</p>
+                                    <p className="text-[10px] text-on-surface-variant/50">{p.desc}</p>
+                                  </div>
+                                  {activeProvider === p.id && <span className="material-symbols-outlined text-primary text-sm">check_circle</span>}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <input
-                            type="range"
-                            name="threshold"
-                            min="0.1" max="0.9" step="0.05"
-                            defaultValue={config?.similarity_threshold || "0.5"}
-                            onInput={(e) => {
-                              const el = document.getElementById("thresh-display");
-                              if (el) el.textContent = (e.target as HTMLInputElement).value;
-                            }}
-                            className="w-full accent-primary"
-                          />
-                          <div className="flex justify-between text-[10px] text-on-surface-variant/40 font-mono">
-                            <span>0.1 — Exact (Strict)</span>
-                            <span>0.9 — Broad (Loose)</span>
+
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Grok Reasoning Version</label>
+                              <div className="relative">
+                                <select
+                                  name="grok_model"
+                                  defaultValue={config?.grok_model || "grok-3-auto"}
+                                  className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 appearance-none transition-all cursor-pointer"
+                                >
+                                  <option value="grok-3-auto">Grok-3 Auto — Default</option>
+                                  <option value="grok-3-fast">Grok-3 Fast — Low latency</option>
+                                  <option value="grok-4">Grok-4 — Expert Analysis</option>
+                                  <option value="grok-4-mini-thinking-tahoe">Grok-4 Mini (Thinking)</option>
+                                </select>
+                                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 pointer-events-none">unfold_more</span>
+                              </div>
                           </div>
-                          <p className="text-[10px] text-on-surface-variant/40">Controls how closely a query must match a document (lower = stricter match required).</p>
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Reasoning Engine (Grok)</label>
-                          <div className="relative">
-                            <select
-                              name="grok_model"
-                              defaultValue={config?.grok_model || "grok-3-auto"}
-                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 appearance-none transition-all cursor-pointer"
-                            >
-                              <option value="grok-3-auto">Grok-3 Auto — Automatic optimization</option>
-                              <option value="grok-3-fast">Grok-3 Fast — High-speed processing</option>
-                              <option value="grok-4">Grok-4 — Enterprise reasoning (Expert)</option>
-                              <option value="grok-4-mini-thinking-tahoe">Grok-4 Mini (Thinking) — Deep cognitive analysis</option>
-                            </select>
-                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 pointer-events-none">unfold_more</span>
+                        {/* Right: Threshold & UX */}
+                        <div className="space-y-6">
+                          <div className="space-y-3">
+                             <div className="flex items-center justify-between">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Semantic Sensitivity</label>
+                               <span className="text-sm font-black text-primary" id="thresh-display">{config?.similarity_threshold || "0.5"}</span>
+                             </div>
+                             <input
+                               type="range"
+                               name="threshold"
+                               min="0.1" max="0.9" step="0.05"
+                               defaultValue={config?.similarity_threshold || "0.5"}
+                               onInput={(e) => {
+                                 const el = document.getElementById("thresh-display");
+                                 if (el) el.textContent = (e.target as HTMLInputElement).value;
+                               }}
+                               className="w-full accent-primary"
+                             />
+                             <p className="text-[10px] text-on-surface-variant/40">Higher values = broader matches. Lower values = strict precision.</p>
                           </div>
-                          <p className="text-[10px] text-on-surface-variant/40">Select the cognitive model used for query analysis and response generation.</p>
-                        </div>
 
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Persona Greeting</label>
+                            <textarea
+                              name="greeting"
+                              defaultValue={config?.greeting_message}
+                              rows={2}
+                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none placeholder:text-on-surface-variant/30"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Fallback Message</label>
+                            <textarea
+                              name="fallback"
+                              defaultValue={config?.fallback_message}
+                              rows={2}
+                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none placeholder:text-on-surface-variant/30"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end pt-4 border-t border-outline-variant/10">
                         <button
                           type="submit"
-                          className="flex items-center gap-2 bg-primary text-white dark:text-zinc-950 px-6 py-3 rounded-xl font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                          disabled={aiSaving}
+                          className="flex items-center gap-2 bg-primary text-white dark:text-zinc-950 px-8 py-3 rounded-xl font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
                         >
-                          <span className="material-symbols-outlined text-sm">save</span>
-                          Save Parameters
+                          {aiSaving ? <><span className="material-symbols-outlined animate-spin text-sm">refresh</span>Saving...</> : <><span className="material-symbols-outlined text-sm">save</span>Save AI Strategy</>}
                         </button>
-                      </form>
-                    )}
+                      </div>
+                    </form>
                   </div>
 
-                  {/* Right: Suggestions (2/5 width) */}
-                  <div className="xl:col-span-2 bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden flex flex-col">
-                    <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3">
-                      <div className="w-9 h-9 bg-secondary/10 rounded-xl flex items-center justify-center">
-                        <span className="material-symbols-outlined text-secondary text-lg">lightbulb</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    {/* Left: Cookies & suggestions (3/5) */}
+                    <div className="lg:col-span-3 space-y-8">
+                      
+                      {/* Gemini Cookies */}
+                      <div className="bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
+                         <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3">
+                          <div className="w-9 h-9 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
+                            <span className="material-symbols-outlined text-lg">cookie</span>
+                          </div>
+                          <h3 className="text-base font-black text-on-surface">Provider Credentials</h3>
+                        </div>
+                        <div className="p-7 space-y-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Gemini __Secure-1PSID</label>
+                            <textarea
+                              value={gemini1psid}
+                              onChange={(e) => setGemini1psid(e.target.value)}
+                              rows={1}
+                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-[10px] font-mono outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                              placeholder="g.a000..."
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Gemini __Secure-1PSIDTS</label>
+                            <textarea
+                              value={gemini1psidts}
+                              onChange={(e) => setGemini1psidts(e.target.value)}
+                              rows={1}
+                              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface text-[10px] font-mono outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                              placeholder="sidts.a000..."
+                            />
+                          </div>
+                          <p className="text-[9px] text-on-surface-variant/40 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">info</span>
+                            Cookies are required for Gemini (Web) access. Update and save AI strategy above.
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-base font-black text-on-surface">Chat Suggestions</h3>
-                        <p className="text-[11px] text-on-surface-variant/60">Up to 5 questions shown in the chat</p>
+
+                      {/* Chat Suggestions */}
+                      <div className="bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
+                        <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3 text-secondary">
+                          <span className="material-symbols-outlined text-lg">lightbulb</span>
+                          <h3 className="text-base font-black text-on-surface">Conversation Starters</h3>
+                        </div>
+                        <div className="p-7 space-y-4">
+                          <div className="space-y-3">
+                            {suggestionInputs.map((q, i) => (
+                              <div key={i} className="flex gap-2 items-center">
+                                <span className="text-[10px] font-black text-on-surface-variant/30 w-4 shrink-0">{i + 1}</span>
+                                <input
+                                  value={q}
+                                  onChange={(e) => {
+                                    const next = [...suggestionInputs];
+                                    next[i] = e.target.value;
+                                    setSuggestionInputs(next);
+                                  }}
+                                  className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-3 py-2.5 text-on-surface text-xs outline-none focus:ring-2 focus:ring-secondary/20 transition-all"
+                                  placeholder="Suggested question..."
+                                />
+                                <button onClick={() => setSuggestionInputs(suggestionInputs.filter((_, j) => j !== i))} className="material-symbols-outlined text-error/30 hover:text-error text-sm">remove</button>
+                              </div>
+                            ))}
+                            {suggestionInputs.length < 5 && (
+                              <button onClick={() => setSuggestionInputs([...suggestionInputs, ""])} className="w-full border-2 border-dashed border-outline-variant/10 rounded-xl py-2 text-[10px] uppercase font-black tracking-widest text-on-surface-variant/40 hover:text-secondary transition-all">+ Add Starter</button>
+                            )}
+                          </div>
+                          <button
+                            onClick={async () => {
+                              const filtered = suggestionInputs.filter(s => s.trim());
+                              await api.updateConfig({ suggested_questions: JSON.stringify(filtered) });
+                              addNotification("Suggestions updated", "success");
+                              refreshData();
+                            }}
+                            className="w-full bg-secondary text-white dark:text-zinc-950 py-3 rounded-xl font-bold text-xs"
+                          >Update Suggestions</button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1 p-7 flex flex-col gap-5">
-                      <div className="bg-secondary/5 border border-secondary/20 rounded-2xl p-4 flex gap-2">
-                        <span className="material-symbols-outlined text-secondary text-sm shrink-0">info</span>
-                        <p className="text-xs text-on-surface-variant/70 leading-relaxed">These questions appear as clickable suggestions when a user opens the chat for the first time.</p>
-                      </div>
 
-                      <div className="space-y-3 flex-1">
-                        {suggestionInputs.map((q, i) => (
-                          <div key={i} className="flex gap-2 items-center">
-                            <span className="text-[10px] font-black text-on-surface-variant/30 w-4 shrink-0">{i + 1}</span>
-                            <input
-                              value={q}
-                              onChange={(e) => {
-                                const next = [...suggestionInputs];
-                                next[i] = e.target.value;
-                                setSuggestionInputs(next);
-                              }}
-                              placeholder={`Suggestion ${i + 1}...`}
-                              className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-3 py-2.5 text-on-surface text-xs outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary/40 transition-all placeholder:text-on-surface-variant/30"
-                            />
-                            <button
-                              onClick={() => setSuggestionInputs(suggestionInputs.filter((_, j) => j !== i))}
-                              className="material-symbols-outlined text-error/50 hover:text-error text-sm p-1 rounded-lg hover:bg-error/10 transition-all"
-                            >remove</button>
+                    {/* Right: Identity & Security (2/5) */}
+                    <div className="lg:col-span-2 space-y-8">
+                       <div className="bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-xl overflow-hidden">
+                          <div className="px-7 py-5 border-b border-outline-variant/10 flex items-center gap-3">
+                            <div className="w-9 h-9 bg-tertiary/10 rounded-xl flex items-center justify-center text-tertiary">
+                              <span className="material-symbols-outlined text-lg">security</span>
+                            </div>
+                            <h3 className="text-base font-black text-on-surface">Admin Identity</h3>
                           </div>
-                        ))}
+                          <form onSubmit={handleSaveIdentity} className="p-7 space-y-5">
+                             <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">Display Name</label>
+                                <input
+                                  value={displayName}
+                                  onChange={(e) => setDisplayName(e.target.value)}
+                                  className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-on-surface text-sm outline-none focus:ring-1 focus:ring-tertiary"
+                                />
+                             </div>
+                             <div className="pt-2 border-t border-outline-variant/10 space-y-4">
+                                <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Change Password</p>
+                                <input type="password" value={currentPass} onChange={(e) => setCurrentPass(e.target.value)} placeholder="Current Password" className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-error/20" />
+                                <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} placeholder="New Password" className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary/20" />
+                                <input type="password" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder="Confirm New" className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary/20" />
+                             </div>
 
-                        {suggestionInputs.length < 5 && (
-                          <button
-                            onClick={() => setSuggestionInputs([...suggestionInputs, ""])}
-                            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-outline-variant/30 rounded-xl py-2.5 text-xs text-on-surface-variant/50 hover:border-secondary/40 hover:text-secondary transition-all"
-                          >
-                            <span className="material-symbols-outlined text-sm">add</span> Add Suggestion
-                          </button>
-                        )}
-                      </div>
+                             {error && <p className="text-[10px] text-error font-bold">{error}</p>}
+                             {success && <p className="text-[10px] text-emerald-500 font-bold">{success}</p>}
 
-                      <button
-                        onClick={async () => {
-                          const filtered = suggestionInputs.filter(s => s.trim());
-                          await api.updateConfig({ suggested_questions: JSON.stringify(filtered) });
-                          addNotification("Suggestions updated", "success");
-                          refreshData();
-                        }}
-                        className="w-full flex items-center justify-center gap-2 bg-secondary text-white dark:text-zinc-950 py-3 rounded-xl font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20"
-                      >
-                        <span className="material-symbols-outlined text-sm">save</span>
-                        Save Suggestions
-                      </button>
+                             <button type="submit" disabled={identitySaving} className="w-full bg-tertiary text-white dark:text-zinc-950 py-3 rounded-xl font-bold text-sm shadow-lg shadow-tertiary/20 disabled:opacity-40">
+                               {identitySaving ? "Wait..." : "Update Profile"}
+                             </button>
+                          </form>
+                       </div>
                     </div>
                   </div>
                 </div>
