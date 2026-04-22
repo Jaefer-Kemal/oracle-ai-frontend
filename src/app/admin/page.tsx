@@ -662,7 +662,7 @@ function DashboardContent() {
                           type="file"
                           id="file-upload"
                           className="hidden"
-                          accept=".pdf,.docx,.txt"
+                          accept=".pdf,.docx,.txt,.md"
                           onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                         />
                         {selectedFile ? (
@@ -685,7 +685,7 @@ function DashboardContent() {
                       {/* Accepted formats */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Accepted:</span>
-                        {['PDF', 'DOCX', 'TXT'].map(f => (
+                        {['PDF', 'DOCX', 'TXT', 'MD'].map(f => (
                           <span key={f} className="text-[10px] font-black bg-surface-container-high border border-outline-variant/20 rounded-lg px-2 py-0.5 text-on-surface-variant">{f}</span>
                         ))}
                       </div>
@@ -749,7 +749,8 @@ function DashboardContent() {
                       <div className="bg-surface-container rounded-xl p-4 border border-outline-variant/10 flex gap-3">
                         <span className="material-symbols-outlined text-on-surface-variant/40 text-sm shrink-0 mt-0.5">info</span>
                         <p className="text-xs text-on-surface-variant/60 leading-relaxed">
-                          The file will be parsed, split into ~800-token chunks, deduplicated via SHA-256, and embedded using Cohere. All chunks are stored in the vector database and become immediately searchable.
+                          The file will be parsed, split into ~800-token chunks, deduplicated via SHA-256, and embedded using Cohere. 
+                          <span className="block mt-1 text-primary/80 font-medium">New: AI will automatically suggest a professional category if none is provided.</span>
                         </p>
                       </div>
                     </div>

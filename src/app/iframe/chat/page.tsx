@@ -3,8 +3,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
+import Markdown from "@/components/chat/Markdown";
 
 const LS_SESSION_KEY = "oracle_guest_session";
+const LS_HISTORY_KEY = "oracle_guest_history";
+const LS_SUGGESTIONS_KEY = "oracle_dynamic_suggestions";
 
 interface Msg { role: "user" | "assistant"; content: string; }
 
@@ -26,25 +29,51 @@ export default function IframeChat() {
     }
     setSessionId(currentSid);
 
-    // Initial load: Fetch Greeting + DB History
+    // Initial load: Attempt Local Cache first, then sync with DB
     const init = async () => {
+      let activeSid = currentSid;
+      
+      // Load from cache for instant feedback
+      const localHistory = localStorage.getItem(LS_HISTORY_KEY);
+      if (localHistory) {
+        try {
+          const parsed = JSON.parse(localHistory);
+          if (parsed.length > 0) setMessages(parsed);
+        } catch (e) {
+          console.warn("History cache corrupted");
+        }
+      }
+
+      // Load dynamic suggestions from cache
+      const localSuggestions = localStorage.getItem(LS_SUGGESTIONS_KEY);
+      if (localSuggestions) {
+        try {
+          const parsed = JSON.parse(localSuggestions);
+          if (Array.isArray(parsed)) setDynamicSuggestions(parsed);
+        } catch (e) {
+          console.warn("Suggestions cache corrupted");
+        }
+      }
+
       try {
         const [greetData, historyData] = await Promise.all([
           api.getGreeting(),
-          api.getSessionHistory(currentSid!, true) // Pass true for public history
+          api.getSessionHistory(activeSid!, true)
         ]);
         
         const greeting: Msg = { role: "assistant", content: greetData.greeting };
-        const dbMsgs: Msg[] = historyData.flatMap((h: any) => [
+        const dbMsgs: Msg[] = Array.isArray(historyData) ? historyData.flatMap((h: any) => [
           { role: "user", content: h.query },
           { role: "assistant", content: h.answer }
-        ]);
+        ]) : [];
         
-        setMessages([greeting, ...dbMsgs]);
+        const finalMsgs = dbMsgs.length > 0 ? [greeting, ...dbMsgs] : [greeting];
+        
+        // Strict Sync: Only overwrite if we found something or it is a fresh session
+        setMessages(finalMsgs);
+        localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(finalMsgs));
       } catch (err) {
-        console.error("Failed to initialize iframe chat", err);
-        // Fallback to greeting if history fails
-        api.getGreeting().then(d => setMessages([{ role: "assistant", content: d.greeting }])).catch(() => {});
+        console.error("Critical History Sync Failure:", err);
       }
     };
 
@@ -56,9 +85,10 @@ export default function IframeChat() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Local state update only - Persistence is handled on the server side during api.query
+  // Local state update + Cache persistence
   const setLocalMessages = (msgs: Msg[]) => {
     setMessages(msgs);
+    localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(msgs));
   };
 
   const handleSend = async (text?: string) => {
@@ -81,10 +111,18 @@ export default function IframeChat() {
       const res = await api.query(msg, sessionId, false, history);
       setLocalMessages([...newMsgs, { role: "assistant", content: res.answer || "I couldn't generate an answer." }]);
       
+      // Update session ID if it changed or was newly generated
+      if (res.session_id && res.session_id !== sessionId) {
+        setSessionId(res.session_id);
+        localStorage.setItem(LS_SESSION_KEY, res.session_id);
+      }
+
       if (res.follow_ups && res.follow_ups.length > 0) {
         setDynamicSuggestions(res.follow_ups);
+        localStorage.setItem(LS_SUGGESTIONS_KEY, JSON.stringify(res.follow_ups));
       } else {
         setDynamicSuggestions([]);
+        localStorage.removeItem(LS_SUGGESTIONS_KEY);
       }
     } catch {
       setLocalMessages([...newMsgs, { role: "assistant", content: "Sorry, I couldn't connect to the server." }]);
@@ -95,13 +133,13 @@ export default function IframeChat() {
   };
 
   const handleNew = () => {
-    localStorage.removeItem("oracle_used_suggestions"); // Reset discovery for new guest session
-    window.dispatchEvent(new Event("oracle-reset"));
     const newSid = crypto.randomUUID();
     localStorage.setItem(LS_SESSION_KEY, newSid);
+    localStorage.removeItem(LS_HISTORY_KEY);
+    localStorage.removeItem(LS_SUGGESTIONS_KEY);
     setSessionId(newSid);
-    setDynamicSuggestions([]); // Always flush dynamic suggestions on new session
-    api.getGreeting().then((d) => setMessages([{ role: "assistant", content: d.greeting }])).catch(() => setMessages([]));
+    setDynamicSuggestions([]);
+    api.getGreeting().then((d) => setLocalMessages([{ role: "assistant", content: d.greeting }])).catch(() => setLocalMessages([]));
   };
 
   return (
@@ -129,20 +167,20 @@ export default function IframeChat() {
             <div className={`max-w-[85%] px-3.5 py-2.5 rounded-xl text-sm leading-relaxed ${
               msg.role === "user"
                 ? "bg-primary text-white dark:text-zinc-950 rounded-tr-none"
-                : "bg-surface-container border border-outline-variant/20 text-on-surface rounded-tl-none"
+                : "bg-surface-container border border-outline-variant/20 text-on-surface rounded-tl-none overflow-hidden"
             }`}>
-              {msg.content}
+              <Markdown content={msg.content} />
             </div>
           </div>
         ))}
 
-        {/* Dynamic Contextual Suggestions */}
-        {!loading && messages.length > 0 && (
+        {/* Suggestion Logic: Starters only at absolute beginning, Follow-ups during conversation */}
+        {!loading && (
           <div className="pt-2">
             <SuggestedQuestions 
-              suggestions={dynamicSuggestions.length > 0 ? dynamicSuggestions : suggestions}
+              suggestions={messages.length <= 1 ? suggestions : dynamicSuggestions}
               onSelect={handleSend}
-              limit={dynamicSuggestions.length > 0 ? 3 : 5}
+              limit={messages.length <= 1 ? 5 : 3}
               className="px-1"
             />
           </div>

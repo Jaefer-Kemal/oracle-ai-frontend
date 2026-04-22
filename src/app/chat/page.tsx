@@ -8,6 +8,7 @@ import TopBar from "@/components/layout/TopBar";
 import Skeleton from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
+import Markdown from "@/components/chat/Markdown";
 
 interface Source {
   doc_id: number;
@@ -147,9 +148,9 @@ function ChatContent() {
                 <div className={`max-w-[85%] md:max-w-[70%] px-5 py-4 rounded-2xl shadow-lg ${
                   msg.role === "user"
                     ? "bg-primary-container text-on-primary-container rounded-tr-none"
-                    : "bg-surface-container border border-outline-variant/20 rounded-tl-none text-on-surface"
+                    : "bg-surface-container border border-outline-variant/20 rounded-tl-none text-on-surface overflow-hidden"
                 }`}>
-                  <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  <Markdown content={msg.content} />
 
                   {/* ── Sources — now with real filenames ── */}
                   {msg.sources && msg.sources.length > 0 && (
@@ -185,7 +186,7 @@ function ChatContent() {
                 {dynamicSuggestions.length > 0 ? "Follow-up Questions" : "More Discovery"}
               </p>
               <SuggestedQuestions 
-                suggestions={dynamicSuggestions.length > 0 ? dynamicSuggestions : suggestions}
+                suggestions={dynamicSuggestions}
                 onSelect={handleSend}
                 limit={3}
               />

@@ -12,44 +12,17 @@ interface SuggestedQuestionsProps {
 const LS_KEY = "oracle_used_suggestions";
 
 export default function SuggestedQuestions({ suggestions, onSelect, className = "", limit = 10 }: SuggestedQuestionsProps) {
-  const [used, setUsed] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const syncUsed = () => {
-      const stored = localStorage.getItem(LS_KEY);
-      if (stored) {
-        try {
-          setUsed(JSON.parse(stored));
-        } catch (e) {
-          setUsed([]);
-        }
-      } else {
-        setUsed([]);
-      }
-    };
-
-    syncUsed();
     setMounted(true);
-
-    // Listen for manual resets or cross-tab changes
-    window.addEventListener("oracle-reset", syncUsed);
-    window.addEventListener("storage", syncUsed);
-    return () => {
-      window.removeEventListener("oracle-reset", syncUsed);
-      window.removeEventListener("storage", syncUsed);
-    };
   }, []);
 
   const handleSelect = (q: string) => {
-    const updated = [...used, q];
-    setUsed(updated);
-    localStorage.setItem(LS_KEY, JSON.stringify(updated));
     onSelect(q);
   };
 
-  const remaining = suggestions.filter(s => !used.includes(s)).slice(0, limit);
-
+  const remaining = suggestions.slice(0, limit);
   if (!mounted || remaining.length === 0) return null;
 
   return (
