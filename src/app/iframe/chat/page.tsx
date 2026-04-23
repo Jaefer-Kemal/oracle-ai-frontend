@@ -34,11 +34,15 @@ export default function IframeChat() {
       let activeSid = currentSid;
       
       // Load from cache for instant feedback
+      let hasLocal = false;
       const localHistory = localStorage.getItem(LS_HISTORY_KEY);
       if (localHistory) {
         try {
           const parsed = JSON.parse(localHistory);
-          if (parsed.length > 0) setMessages(parsed);
+          if (parsed.length > 0) {
+            setMessages(parsed);
+            hasLocal = true;
+          }
         } catch (e) {
           console.warn("History cache corrupted");
         }
@@ -56,22 +60,29 @@ export default function IframeChat() {
       }
 
       try {
+        // Optimization: If we have local history, we strictly sync only if session active
         const [greetData, historyData] = await Promise.all([
           api.getGreeting(),
           api.getSessionHistory(activeSid!, true)
         ]);
         
-        const greeting: Msg = { role: "assistant", content: greetData.greeting };
         const dbMsgs: Msg[] = Array.isArray(historyData) ? historyData.flatMap((h: any) => [
           { role: "user", content: h.query },
           { role: "assistant", content: h.answer }
         ]) : [];
         
-        const finalMsgs = dbMsgs.length > 0 ? [greeting, ...dbMsgs] : [greeting];
-        
-        // Strict Sync: Only overwrite if we found something or it is a fresh session
-        setMessages(finalMsgs);
-        localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(finalMsgs));
+        // ONLY update state if the DB actually has conversation data. 
+        // If DB is empty but we have local cache, DO NOT overwrite local with just a greeting.
+        if (dbMsgs.length > 0) {
+          const finalMsgs = [{ role: "assistant" as const, content: greetData.greeting }, ...dbMsgs];
+          setMessages(finalMsgs);
+          localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(finalMsgs));
+        } else if (!hasLocal) {
+          // Fresh session with no local or DB history: Show greeting
+          const finalMsgs = [{ role: "assistant" as const, content: greetData.greeting }];
+          setMessages(finalMsgs);
+          localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(finalMsgs));
+        }
       } catch (err) {
         console.error("Critical History Sync Failure:", err);
       }
